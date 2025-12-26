@@ -10,10 +10,7 @@ from openai import OpenAI
 import json
 import pandas as pd
 from datetime import datetime
-#from dotenv import load_dotenv
 
-# Load environment variables from .env file
-#load_dotenv()
 
 # Page configuration
 st.set_page_config(
@@ -58,8 +55,8 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
+#Extract text from uploaded PDF files
 def get_text_from_pdf(pdf_docs):
-    """Extract text from uploaded PDF files"""
     text = ""
     for pdf in pdf_docs:
         try:
@@ -72,9 +69,8 @@ def get_text_from_pdf(pdf_docs):
             st.error(f"Error reading PDF {pdf.name}: {str(e)}")
     return text
 
-
+#Split document into sections based on common research paper headers
 def get_sections(docs):
-    """Split document into sections based on common research paper headers"""
     section_titles = [
         "abstract", "introduction", "background", "related work",
         "methodology", "methods", "approach", "experimental setup",
@@ -83,7 +79,7 @@ def get_sections(docs):
         "conclusion", "conclusions", "future work", "future directions"
     ]
     
-    # Create regex pattern
+    #Create regex pattern
     pattern = r"(?i)\b(" + "|".join(section_titles) + r")\b"
     splits = re.split(pattern, docs)
     
@@ -103,9 +99,8 @@ def get_sections(docs):
     
     return sections
 
-
+#Extract structured insights using OpenAI API
 def extract_insights(sections, api_key):
-    """Extract structured insights using OpenAI API"""
     prompt = f'''
 Extract structured insights from the following research paper sections.
 Return JSON with these exact keys: summary, problem, methodology, findings, limitations, future_work.
@@ -170,9 +165,8 @@ Return your answer ONLY as valid JSON with no additional text or markdown format
         st.error(f"❌ API call failed: {e}")
         return None
 
-
+#Save insights to CSV file
 def save_insights(insights_list, filename="insights.csv"):
-    """Save insights to CSV file"""
     try:
         df = pd.DataFrame(insights_list)
         df['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -182,24 +176,24 @@ def save_insights(insights_list, filename="insights.csv"):
         st.error(f"Error saving insights: {e}")
         return None
 
-
+#Display a styled insight card
 def display_insight_card(title, content, icon):
-    """Display a styled insight card"""
+    # FIX APPLIED HERE: Added style="color: #1f2937;" to the h3 tag
     st.markdown(f"""
         <div class="insight-card">
-            <h3>{icon} {title}</h3>
+            <h3 style="color: #1f2937; margin-top: 0;">{icon} {title}</h3>
             <p style="color: #4B5563; line-height: 1.6;">{content}</p>
         </div>
     """, unsafe_allow_html=True)
 
 
 def main():
-    # Title and description
+    #Title and description
     st.title("📄 Research Paper Insights Dashboard")
     st.markdown("**Extract and analyze key insights from academic research papers using AI**")
     st.markdown("---")
     
-    # Sidebar for configuration
+    #Sidebar for configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
         
@@ -211,13 +205,7 @@ def main():
             st.success(f"✅ API Key loaded from .env")
             st.text(f"Key preview: {key_preview}")
             st.text(f"Key length: {len(default_api_key)} chars")
-            
-            # Check for common issues
-            if default_api_key.startswith('"') or default_api_key.endswith('"'):
-                st.error("⚠️ Your key has quotes! Remove them from .env")
-            if ' ' in default_api_key:
-                st.error("⚠️ Your key has spaces! Remove them from .env")
-            
+                        
             api_key = default_api_key.strip() # Clean the key
             
             show_key_input = st.checkbox("Override with different key", value=False)
@@ -239,12 +227,12 @@ def main():
         
         st.markdown("---")
         
-        # Sample data option
-        st.header("📋 Quick Start")
+        #Sample data option
+        st.header("Quick Start")
         use_sample = st.checkbox("Use Sample Data", help="Load a sample research paper for testing")
         
         st.markdown("---")
-        st.markdown("### 📚 How to Use")
+        st.markdown("### How to Use")
         st.markdown("""
         1. Enter your OpenAI API key
         2. Upload PDF files or use sample data
@@ -255,7 +243,7 @@ def main():
     
     # Main content area
     if use_sample:
-        st.info("📋 Using sample research paper data")
+        st.info("Using sample research paper data")
         sample_text = """ABSTRACT
 This paper explores the impact of AI on education. We highlight the main problem of scaling personalized learning.
 
@@ -281,7 +269,7 @@ We propose exploring the role of AI in collaborative learning environments and i
         raw_text = sample_text
     else:
         # File uploader
-        st.header("📁 Upload Research Papers")
+        st.header("Upload Research Papers")
         uploaded_files = st.file_uploader(
             "Upload PDF files",
             type=['pdf'],
@@ -298,21 +286,21 @@ We propose exploring the role of AI in collaborative learning environments and i
     # Processing logic
     if process_button:
         if not api_key:
-            st.error("⚠️ Please enter your OpenAI API key in the sidebar")
+            st.error("Please enter your OpenAI API key in the sidebar")
             return
         
         if not use_sample and not uploaded_files:
-            st.error("⚠️ Please upload at least one PDF file or use sample data")
+            st.error("Please upload at least one PDF file or use sample data")
             return
         
-        with st.spinner("🔄 Processing papers... This may take a minute."):
+        with st.spinner("Processing papers... This may take a minute."):
             try:
                 # Extract text
                 if not use_sample:
                     raw_text = get_text_from_pdf(uploaded_files)
                 
                 if not raw_text or len(raw_text.strip()) < 100:
-                    st.error("❌ Could not extract sufficient text from the document(s)")
+                    st.error("Could not extract sufficient text from the document(s)")
                     return
                 
                 # Extract sections
@@ -325,22 +313,22 @@ We propose exploring the role of AI in collaborative learning environments and i
                     # Store in session state
                     st.session_state['insights'] = insights
                     st.session_state['sections'] = sections
-                    st.success("✅ Processing complete!")
+                    st.success("Processing complete!")
                 else:
-                    st.error("❌ Failed to extract insights")
+                    st.error("Failed to extract insights")
                     
             except Exception as e:
-                st.error(f"❌ Error during processing: {e}")
+                st.error(f"Error during processing: {e}")
     
     # Display results
     if 'insights' in st.session_state:
         insights = st.session_state['insights']
         
         st.markdown("---")
-        st.header("📊 Extracted Insights")
+        st.header("Extracted Insights")
         
         # Summary section (full width)
-        st.markdown("### 📝 Summary")
+        st.markdown("### Summary")
         display_insight_card("Executive Summary", insights.get('summary', 'N/A'), "📄")
         
         # Two column layout for other insights
